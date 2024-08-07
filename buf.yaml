@@ -1,0 +1,13 @@
+version: v1
+name: buf.build/RostovskiyBoris/user-manager
+deps:
+  - buf.build/googleapis/googleapis
+  - buf.build/grpc-ecosystem/grpc-gateway
+lint:
+  use:
+    - MINIMAL
+  except:
+    - PACKAGE_DIRECTORY_MATCH
+  ignore:
+    - google
+

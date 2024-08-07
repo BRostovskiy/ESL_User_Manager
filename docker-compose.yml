@@ -1,0 +1,36 @@
+version: "3"
+
+services:
+  user_manager:
+    container_name: "user_manager"
+    restart: always
+    build:
+      context: .
+      args:
+        - API_VERSION=v1.0
+    ports:
+      - "8091:8091"
+    expose:
+      - "8091"
+    depends_on:
+      - challengedb
+    networks:
+      - backend
+
+  challengedb:
+    container_name: 'challenge_db_user_manager'
+    image: postgres:10.6-alpine
+    volumes:
+      - ./compose/local:/docker-entrypoint-initdb.d
+    environment:
+      - POSTGRES_MULTIPLE_DATABASES=challenge_dev
+      - POSTGRES_USER=challenge
+      - POSTGRES_PASSWORD=challenge
+    ports:
+      - "5432:5432"
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge

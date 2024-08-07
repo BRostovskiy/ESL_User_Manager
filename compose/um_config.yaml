@@ -1,0 +1,14 @@
+HTTP: true
+GRPC: true
+handler:
+  addr: :8091
+
+storage:
+  type: postgres
+  config:
+    server: challenge_db_user_manager:5432
+    user: challenge
+    pwd: challenge
+    db_name: challenge_dev
+filters:
+  - country

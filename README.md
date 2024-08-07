@@ -69,7 +69,7 @@ curl http://localhost:8091/api/v1/users?pagination=2
 ```
 - HTTP PAGINATED AND FILTERED:
 ```bash
-curl http://localhost:8091/api//v1/users?pagination=2&filterBy=country&filter=NL
+curl http://localhost:8091/api/v1/users?pagination=2&filterBy=country&filter=NL
 ```
 - HTTP INCLUDING NEXT_PAGE:
 ```bash

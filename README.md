@@ -65,11 +65,11 @@ curl http://localhost:8091/v1/users
 ```
 - HTTP PAGINATED: 
 ```bash
-curl http://localhost:8091/v1/users?pagination=2
+curl http://localhost:8091/api/v1/users?pagination=2
 ```
 - HTTP PAGINATED AND FILTERED:
 ```bash
-curl http://localhost:8091/v1/users?pagination=2&filterBy=country&filter=NL
+curl http://localhost:8091/api//v1/users?pagination=2&filterBy=country&filter=NL
 ```
 - HTTP INCLUDING NEXT_PAGE:
 ```bash
@@ -122,7 +122,7 @@ grpcurl -d '{"first_name":"User3_Updated1", "id": "22e57170-a622-4281-8d7a-048a5
 4. ### Delete user
 - HTTP:
 ```bash
-curl -X DELETE localhost:8081/v1/users/22e57170-a622-4281-8d7a-048a52b8075c
+curl -X DELETE localhost:8091/api/v1/users/22e57170-a622-4281-8d7a-048a52b8075c
 ```
 - GRPC:
 ```bash
@@ -154,7 +154,7 @@ OUTPUT:
 
 - GRPC_HEALTH_PROBE
 ```bash
-grpc_health_probe-darwin-arm64 -addr=localhost:8091
+grpc_health_probe -addr=localhost:8091
 ```
 OUTPUT:
 ```text

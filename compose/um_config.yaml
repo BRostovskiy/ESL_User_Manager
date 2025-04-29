@@ -6,6 +6,7 @@ handler:
 storage:
   type: postgres
   config:
+#    server: 0.0.0.0:5433
     server: challenge_db_user_manager:5432
     user: challenge
     pwd: challenge

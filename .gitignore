@@ -1,2 +1,4 @@
 .idea
 cmd/cmd
+/bin
+compose/.DS_Store

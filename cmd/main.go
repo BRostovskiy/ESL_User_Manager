@@ -13,13 +13,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/BorisRostovskiy/ESL/internal/api"
 	"github.com/BorisRostovskiy/ESL/internal/clients"
-	"github.com/BorisRostovskiy/ESL/internal/common"
-	grpcServer "github.com/BorisRostovskiy/ESL/internal/servers/grpc"
-	pb "github.com/BorisRostovskiy/ESL/internal/servers/grpc/gen/user-manager"
-	httpHandler "github.com/BorisRostovskiy/ESL/internal/servers/http"
-	pgStorage "github.com/BorisRostovskiy/ESL/internal/storage/pg"
+	"github.com/BorisRostovskiy/ESL/internal/handlers"
+	grpcServer "github.com/BorisRostovskiy/ESL/internal/handlers/grpc"
+	pb "github.com/BorisRostovskiy/ESL/internal/handlers/grpc/gen/user-manager"
+	httpHandler "github.com/BorisRostovskiy/ESL/internal/handlers/http"
+	pgStorage "github.com/BorisRostovskiy/ESL/internal/repository/pg"
+	"github.com/BorisRostovskiy/ESL/internal/service"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/reflection"
 
 	nested "github.com/antonfisher/nested-logrus-formatter"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
@@ -40,10 +42,6 @@ const (
 )
 
 var version = "dev"
-
-func setupAllowedFilters(cfg config) {
-	common.AllowedFilters.WithValues(cfg.Filters)
-}
 
 func setupLogger(lvl string) *logrus.Logger {
 	logger := logrus.New()
@@ -66,7 +64,7 @@ func setupLogger(lvl string) *logrus.Logger {
 	return logger
 }
 
-func setupGRPC(l *logrus.Logger, users api.Users) *grpc.Server {
+func setupGRPC(l *logrus.Logger, users handlers.UsersService) *grpc.Server {
 	loggingOptions := []logging.Option{
 		logging.WithLogOnEvents(logging.StartCall, logging.FinishCall),
 		logging.WithDurationField(logging.DurationToDurationField),
@@ -80,6 +78,7 @@ func setupGRPC(l *logrus.Logger, users api.Users) *grpc.Server {
 		),
 	)
 
+	reflection.Register(grpcS)
 	pb.RegisterUserManagerServer(grpcS, grpcServer.New(users, l))
 	healthServer := grpcHealth.NewServer()
 	healthServer.SetServingStatus(grpcHealthService, grpcHealthv1.HealthCheckResponse_SERVING)
@@ -87,7 +86,7 @@ func setupGRPC(l *logrus.Logger, users api.Users) *grpc.Server {
 	return grpcS
 }
 
-func mustSetupHTTP(logger *logrus.Logger, users api.UsersAPI, cfg config) *http.Server {
+func mustSetupHTTP(logger *logrus.Logger, users handlers.UsersService, cfg config) *http.Server {
 	h, err := httpHealth.New(
 		httpHealth.WithSystemInfo(),
 		httpHealth.WithComponent(httpHealth.Component{
@@ -98,7 +97,7 @@ func mustSetupHTTP(logger *logrus.Logger, users api.UsersAPI, cfg config) *http.
 		logrus.Fatal(err)
 	}
 	if err = h.Register(httpHealth.Config{
-		Name:      "storage",
+		Name:      "repository",
 		Timeout:   time.Second * 5,
 		SkipOnErr: true,
 		Check: func(ctx context.Context) error {
@@ -113,7 +112,7 @@ func mustSetupHTTP(logger *logrus.Logger, users api.UsersAPI, cfg config) *http.
 			Target:  cfg.Handler.Addr,
 			Service: grpcHealthService,
 			DialOptions: []grpc.DialOption{
-				grpc.WithInsecure(),
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
 			},
 		})
 		if err = h.Register(httpHealth.Config{
@@ -128,22 +127,22 @@ func mustSetupHTTP(logger *logrus.Logger, users api.UsersAPI, cfg config) *http.
 		}
 	}
 
-	// Creating a normal HTTP servers
+	// Creating a normal HTTP handlers
 	return &http.Server{
 		Handler: httpHandler.New(logger, users, h),
 	}
 }
 
-func mustSetupStorage(cfg config) api.UserRepo {
+func mustSetupStorage(cfg config, log *logrus.Logger) service.UserRepo {
 	switch cfg.Storage.Type {
 	case postgresStorage:
-		store, err := pgStorage.New(&cfg.Storage.Config)
+		store, err := pgStorage.New(&cfg.Storage.Config, log)
 		if err != nil {
-			logrus.Fatalf("failed to create storage: %v", err)
+			logrus.Fatalf("failed to create repository: %v", err)
 		}
 		return store
 	default:
-		logrus.Fatal("unknown storage: %s", cfg.Storage.Type)
+		logrus.Fatalf("unknown repository: %s", cfg.Storage.Type)
 	}
 	return nil
 }
@@ -238,11 +237,10 @@ func main() {
 
 	logger := setupLogger(logLevel)
 	cfg := mustSetupConfig(configFile)
-	storage := mustSetupStorage(cfg)
-	users := api.New(storage, logger, clients.NewChannelNotificationSvc(logger))
-	setupAllowedFilters(cfg)
+	storage := mustSetupStorage(cfg, logger)
+	users := service.New(storage, logger, clients.NewChannelNotificationSvc(logger))
 
-	// creating a listener for servers
+	// creating a listener for handlers
 	l, err := net.Listen("tcp", cfg.Handler.Addr)
 	if err != nil {
 		logrus.Fatal(err)
@@ -250,16 +248,16 @@ func main() {
 
 	m := cmux.New(l)
 
-	var grpcS *grpc.Server
+	var grpcSrv *grpc.Server
 	if cfg.GRPC {
-		grpcS = setupGRPC(logger, users)
-		serve(grpcS, m.Match(cmux.HTTP2()))
+		grpcSrv = setupGRPC(logger, users)
+		serve(grpcSrv, m.Match(cmux.HTTP2()))
 	}
 
-	var httpS *http.Server
+	var httpSrv *http.Server
 	if cfg.HTTP {
-		httpS = mustSetupHTTP(logger, users, cfg)
-		serve(httpS, m.Match(cmux.HTTP1Fast()))
+		httpSrv = mustSetupHTTP(logger, users, cfg)
+		serve(httpSrv, m.Match(cmux.HTTP1Fast()))
 	}
 
 	go func() {
@@ -275,21 +273,19 @@ func main() {
 	gracefulStop := make(chan os.Signal, 2)
 	signal.Notify(gracefulStop, syscall.SIGTERM, syscall.SIGINT)
 
-	select {
-	case <-gracefulStop:
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
-		defer cancel()
+	<-gracefulStop
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
+	defer cancel()
 
-		if cfg.GRPC {
-			grpcS.GracefulStop()
-		}
-
-		if cfg.HTTP {
-			_ = httpS.Shutdown(ctx)
-		}
-
-		m.Close()
-		logrus.Println("===DONE===")
-
+	if cfg.GRPC {
+		grpcSrv.GracefulStop()
 	}
+
+	if cfg.HTTP {
+		_ = httpSrv.Shutdown(ctx)
+	}
+
+	m.Close()
+	logrus.Println("===DONE===")
+
 }

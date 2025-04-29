@@ -1,4 +1,4 @@
-FROM --platform=linux/arm64 golang:1.22-alpine as builder
+FROM --platform=linux/arm64 golang:1.23-alpine as builder
 
 ARG API_VERSION
 
@@ -25,7 +25,7 @@ RUN go install \
         google.golang.org/protobuf/cmd/protoc-gen-go \
         google.golang.org/grpc/cmd/protoc-gen-go-grpc
 RUN buf mod update
-RUN buf generate --path internal/servers/grpc/proto/user-manager/v1/
+RUN buf generate --path internal/handlers/grpc/proto/user-manager/v1/
 
 RUN go build -o user_manager -ldflags "-X main.version=$API_VERSION" ./cmd
 

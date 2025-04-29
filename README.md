@@ -42,7 +42,7 @@ curl -X POST -H "Content-type: application/json" -d '<PAYLOAD>' http://localhost
 ```
 - GRPC:
 ```bash
-grpcurl -d '<PAYLOAD>' --plaintext -import-path=./internal/servers/grpc/proto/external -import-path=./internal/servers/grpc/proto/user-manager/v1/ -proto service.proto localhost:8091 user_manager.v1.UserManager/CreateUser
+grpcurl -d '<PAYLOAD>' --plaintext localhost:8091 user_manager.v1.UserManager.CreateUser
 ```
 - RESPONSE PAYLOAD
 ```json
@@ -77,19 +77,19 @@ curl http://localhost:8091/api/v1/users?next_page=eyJsaW1pdCI6Miwib2Zmc2V0IjoyLC
 ```
 - GRPC:
 ```bash
-grpcurl --plaintext -import-path=./internal/servers/grpc/proto/external -import-path=./internal/servers/grpc/proto/user-manager/v1/ -proto service.proto localhost:8091 user_manager.v1.UserManager/ListUsers
+grpcurl --plaintext localhost:8091 user_manager.v1.UserManager.ListUsers
 ```
 - GRPC PAGINATED:
 ```bash
-grpcurl -d '{"pagination":2}' --plaintext -import-path=./internal/servers/grpc/proto/external -import-path=./internal/servers/grpc/proto/user-manager/v1/ -proto service.proto localhost:8091 user_manager.v1.UserManager/ListUsers
+grpcurl -d '{"pagination":2}' --plaintext localhost:8091 user_manager.v1.UserManager.ListUsers
 ```
 - GRPC PAGINATED AND FILTERED:
 ```bash
-grpcurl -d '{"pagination":2, "filter_by": "country", "filter": "NL"}' --plaintext -import-path=./internal/servers/grpc/proto/external -import-path=./internal/servers/grpc/proto/user-manager/v1/ -proto service.proto localhost:8091 user_manager.v1.UserManager/ListUsers
+grpcurl -d '{"pagination":2, "filter_by": "country", "filter": "NL"}' localhost:8091 user_manager.v1.UserManager.ListUsers
 ```
 - GRPC INCLUDING NEXT_PAGE:
 ```bash
-grpcurl -d '{"next_page": "eyJsaW1pdCI6Miwib2Zmc2V0IjoyLCJmaWx0ZXJfYnkiOiIiLCJmaWx0ZXIiOiIiLCJ0aW1lIjoiMjAyNC0wOC0wNFQyMjo1NDo1My4xMTIzNzErMDI6MDAifQ=="}' --plaintext -import-path=./internal/servers/grpc/proto/external -import-path=./internal/servers/grpc/proto/user-manager/v1/ -proto service.proto localhost:8091 user_manager.v1.UserManager/ListUsers
+grpcurl -d '{"next_page": "eyJsaW1pdCI6Miwib2Zmc2V0IjoyLCJmaWx0ZXJfYnkiOiIiLCJmaWx0ZXIiOiIiLCJ0aW1lIjoiMjAyNC0wOC0wNFQyMjo1NDo1My4xMTIzNzErMDI6MDAifQ=="}' localhost:8091 user_manager.v1.UserManager.ListUsers
 ```
 - RESPONSE PAYLOAD
 ```json
@@ -116,22 +116,26 @@ curl -X PUT -H "Content-type: application/json" -d '{"first_name": "User1_Update
 ```
 - GRPC:
 ```bash
-grpcurl -d '{"first_name":"User3_Updated1", "id": "22e57170-a622-4281-8d7a-048a52b8075c"}' --plaintext -import-path=./internal/servers/grpc/proto/external -import-path=./internal/servers/grpc/proto/user-manager/v1/ -proto service.proto localhost:8091 user_manager.v1.UserManager/UpdateUser
+grpcurl -d '{"first_name":"User3_Updated1", "id": "22e57170-a622-4281-8d7a-048a52b8075c"}' localhost:8091 user_manager.v1.UserManager.UpdateUser
 ```
 
 4. ### Delete user
 - HTTP:
 ```bash
-curl -X DELETE localhost:8091/api/v1/users/22e57170-a622-4281-8d7a-048a52b8075c
+curl -X DELETE http://localhost:8091/api/v1/users/22e57170-a622-4281-8d7a-048a52b8075c
 ```
 - GRPC:
 ```bash
-grpcurl -d '{"id": "22e57170-a622-4281-8d7a-048a52b8075c"}' --plaintext -import-path=./internal/servers/grpc/proto/external -import-path=./internal/servers/grpc/proto/user-manager/v1/ -proto service.proto localhost:8091 user_manager.v1.UserManager/DeleteUser
+grpcurl -d '{"id": "22e57170-a622-4281-8d7a-048a52b8075c"}' localhost:8091 user_manager.v1.UserManager.DeleteUser
 ```
 5. ### Health probe
 - HTTP
 ```bash
 curl http://localhost:8091/api/v1/health
+```
+- GRPC:
+```bash
+grpcurl -plaintext localhost:8091 grpc.health.v1.Health.Check
 ```
 OUTPUT:
 ```json
@@ -162,7 +166,7 @@ status: SERVING
 ```
 
 ## Tests ##
-Simple tests for both handlers added. Please, explore them in `internal/servers/(http|grpc)`
+Simple tests for both handlers added. Please, explore them in `internal/handlers/(http|grpc)`
 
 ## Future improvements ##
 * Remove boilerplate code

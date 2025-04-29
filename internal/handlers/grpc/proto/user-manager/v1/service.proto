@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package user_manager.v1;
+
+option go_package = "./user-manager";
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    title: "User manager"
+    version: "1.0"
+  }
+};
+
+service UserManager {
+  rpc ListUsers (ListUsersRequest) returns (ListUsersResponse) {}
+  rpc CreateUser (CreateUserRequest) returns (User) {}
+  rpc UpdateUser (UpdateUserRequest) returns (google.protobuf.Empty) {}
+  rpc DeleteUser (DeleteUserRequest) returns (google.protobuf.Empty) {}
+}
+
+message ListUsersRequest {
+  optional int32 pagination = 1;
+  optional string next_page = 2;
+  optional string filter_by = 3;
+  optional string filter = 4;
+}
+
+message ListUsersResponse {
+  repeated User users = 1;
+  optional string next_page = 2;
+}
+
+message CreateUserRequest {
+  string first_name = 1;
+  string last_name = 2;
+  string nickname = 3;
+  string country = 4;
+  string email = 5;
+  string password = 6;
+}
+
+message UpdateUserRequest {
+  string id = 1;
+  optional string first_name = 2;
+  optional string last_name = 3;
+  optional string nickname = 4;
+  optional string password = 5;
+  optional string email = 6;
+  optional string country = 7;
+}
+
+message DeleteUserRequest {
+  string id = 1;
+}
+
+message User {
+  string id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string nickname = 4;
+  string email = 5;
+  string country = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
